@@ -1,12 +1,62 @@
-# React + Vite
+# 🌍 Community Safety Alert App  
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[![Deploy](https://img.shields.io/github/actions/workflow/status/AugustineTheCreator/community-safety-alert/deploy.yml?branch=main&label=build&logo=github)](https://github.com/AugustineTheCreator/community-safety-alert/actions)  
+![Made with React](https://img.shields.io/badge/React-blue?logo=react&logoColor=white)  
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)  
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?logo=tailwind-css&logoColor=white)  
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black)  
+![License](https://img.shields.io/github/license/AugustineTheCreator/community-safety-alert)  
 
-Currently, two official plugins are available:
+A simple web app for reporting and tracking community safety incidents.  
+Built with **Vite + React + TailwindCSS + Firebase**.  
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🚀 Live Preview  
+👉 [View on GitHub Pages](https://augustinethecreator.github.io/community-safety-alert/)  
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## ✨ Features  
+- 📝 Report incidents with type, description, and location  
+- 📷 (Coming soon) Upload images to support reports  
+- 📡 Real-time database powered by Firebase Firestore  
+- 🎨 Modern UI styled with TailwindCSS  
+- ⚡ Fast build setup with Vite  
+
+---
+
+## 🛠️ Tech Stack  
+- **Frontend:** React + Vite  
+- **Styling:** TailwindCSS  
+- **Database:** Firebase Firestore  
+- **Hosting:** GitHub Pages (auto-deployed via GitHub Actions)  
+
+---
+
+## 📂 Project Setup  
+
+```bash
+# clone the repo
+git clone https://github.com/AugustineTheCreator/community-safety-alert.git
+
+# move into folder
+cd community-safety-alert
+
+# install dependencies
+npm install
+
+# run dev server
+npm run dev
+
+🔮 Roadmap
+✅ Basic incident form (text-only reports)
+🔜 Image uploads via Firebase Storage
+🔜 Incident dashboard for viewing reports
+🔜 User authentication (sign in & manage reports)
+
+💖 Contributing
+Contributions, issues, and feature requests are welcome!
+Feel free to fork this repo and submit a PR.
+
+<p align="center"> Made with 💖 and ☕ by <a href="https://github.com/AugustineTheCreator">AugustineTheCreator</a> </p>
