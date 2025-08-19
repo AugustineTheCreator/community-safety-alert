@@ -30,6 +30,8 @@ jobs:
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3   # ✅ updated
+        with:
+            path: ./dist   # ✅ instead of ./_site
 
   deploy:
     needs: build
