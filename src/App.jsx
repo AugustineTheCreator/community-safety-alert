@@ -1,7 +1,14 @@
+import IncidentForm from "./components/IncidentForm";
+import IncidentList from "./components/IncidentList";
+
 function App() {
   return (
-    <div className="h-screen flex items-center justify-center bg-blue-500 text-white text-3xl font-bold">
-      Tailwind is working! 🚀
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="text-2xl font-bold text-center text-blue-700">
+        Community Safety Alert 🚨
+      </h1>
+      <IncidentForm onSubmit={() => {}} /> 
+      <IncidentList />
     </div>
   );
 }
