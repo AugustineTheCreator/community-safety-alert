@@ -48,6 +48,7 @@ npm install
 
 # run dev server
 npm run dev
+```
 
 🔮 Roadmap
 ✅ Basic incident form (text-only reports)
