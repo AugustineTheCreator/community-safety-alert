@@ -1,118 +1,213 @@
-import { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import React, { useState, useRef, useEffect } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 
-export default function IncidentForm({ onSubmit }) {
+const categories = [
+  { value: "fire", label: "🔥 Fire/Explosion", color: "bg-red-600" },
+  { value: "crime", label: "🚔 Crime/Theft", color: "bg-yellow-500" },
+  { value: "violence", label: "⚠️ Violence/Unrest", color: "bg-orange-600" },
+  { value: "accident", label: "🚗 Road Accident", color: "bg-blue-600" },
+  { value: "disaster", label: "🌊 Natural Disaster", color: "bg-purple-600" },
+  { value: "medical", label: "🏥 Medical Emergency", color: "bg-green-600" },
+  { value: "other", label: "❓ Other", color: "bg-gray-500" },
+];
+
+function IncidentForm() {
   const [type, setType] = useState("");
   const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [image, setImage] = useState(null);
+  const [locationName, setLocationName] = useState("");
+  const [coords, setCoords] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
 
-  // 🔹 This is the handleSubmit function
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const inputRef = useRef(null);
 
-    if (!type || !description || !location) {
-      alert("Please fill in all fields.");
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(false);
+        setError("");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
+  const fetchSuggestions = async (query) => {
+    if (!query) {
+      setSuggestions([]);
       return;
     }
-
     try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, "incidents"), {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query
+        )}&limit=5`
+      );
+      const data = await res.json();
+      setSuggestions(data);
+    } catch (err) {
+      console.error("Location search failed:", err);
+    }
+  };
+
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCoords({ lat: latitude, lng: longitude });
+        setLocationName(`📍 Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
+        setLoading(false);
+        setError("");
+        setSuggestions([]);
+      },
+      () => {
+        setError("Failed to fetch location. Try searching manually.");
+        setLoading(false);
+      }
+    );
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!type || !description || !locationName || !coords) {
+      setError("All fields including location are required.");
+      return;
+    }
+    try {
+      await addDoc(collection(db, "incidents"), {
         type,
         description,
-        location,
-        date: new Date().toISOString(),
+        locationName,
+        coords,
+        timestamp: serverTimestamp(),
       });
-
-      console.log("Incident stored with ID:", docRef.id);
-
-      // Update local state (UI still works instantly)
-      onSubmit({
-        id: docRef.id,
-        type,
-        description,
-        location,
-        image,
-        date: new Date().toISOString(),
-      });
-
-      // Reset form
-      setType("");
+      setSuccess(true);
       setDescription("");
-      setLocation("");
-      setImage(null);
-      e.target.reset();
-    } catch (error) {
-      console.error("Error adding incident:", error);
-      alert("Failed to save report. Please try again.");
+      setType("");
+      setLocationName("");
+      setCoords(null);
+      setSuggestions([]);
+    } catch (err) {
+      setError("Failed to submit. Try again.");
+      console.error(err);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white shadow-md rounded-lg p-6 space-y-4 w-full max-w-lg mx-auto mt-6"
-    >
-      <h2 className="text-xl font-semibold text-gray-700 text-center sm:text-left">
-        Report an Incident
+    <div className="max-w-xl mx-auto bg-white shadow-xl rounded-2xl p-6 mt-8">
+      <h2 className="text-2xl font-bold mb-4 text-center text-blue-700">
+        🚨 Report an Incident
       </h2>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Type</label>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg p-2 mt-1 bg-white"
+      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {success && (
+        <p className="text-green-600 text-sm mb-3">
+          ✅ Incident reported successfully!
+        </p>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Category */}
+        <div>
+          <label className="block font-semibold mb-1">Incident Type</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full border rounded-lg p-2"
+            required
+          >
+            <option value="">Select incident type</option>
+            {categories.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Select the category that best describes the incident.
+          </p>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="block font-semibold mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Provide a clear description..."
+            className="w-full border rounded-lg p-2"
+            rows="3"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Keep it short, clear, and factual.
+          </p>
+        </div>
+
+        {/* Location */}
+        <div className="relative">
+          <label className="block font-semibold mb-1">Location</label>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={locationName}
+              onChange={(e) => {
+                setLocationName(e.target.value);
+                fetchSuggestions(e.target.value);
+              }}
+              placeholder="Search or enter location"
+              className="flex-grow border rounded-lg p-2"
+              required
+            />
+            <button
+              type="button"
+              onClick={handleUseLocation}
+              disabled={loading}
+              className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? "Locating..." : "Use My Location"}
+            </button>
+          </div>
+          {suggestions.length > 0 && (
+            <ul className="absolute bg-white border mt-1 rounded-lg shadow-lg max-h-40 overflow-y-auto w-full z-10">
+              {suggestions.map((s, idx) => (
+                <li
+                  key={idx}
+                  onClick={() => {
+                    setLocationName(s.display_name);
+                    setCoords({ lat: parseFloat(s.lat), lng: parseFloat(s.lon) });
+                    setSuggestions([]);
+                  }}
+                  className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                >
+                  {s.display_name}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-xs text-gray-500 mt-1">
+            Accurate location ensures alerts reach the right people.
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={!type || !description || !locationName || !coords}
+          className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
         >
-          <option value="">Select incident type</option>
-          <option value="Crime">Crime</option>
-          <option value="Accident">Accident</option>
-          <option value="Fire">Fire</option>
-          <option value="Medical Emergency">Medical Emergency</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Description</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg p-2 mt-1"
-          rows="3"
-          placeholder="Describe what happened..."
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Location</label>
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg p-2 mt-1"
-          placeholder="Enter location..."
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Upload Image</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImage(e.target.files[0])}
-          className="w-full mt-1"
-        />
-      </div>
-
-      <button
-        type="submit"
-        className="w-full sm:w-auto sm:px-6 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-      >
-        Submit Report
-      </button>
-    </form>
+          Submit Report
+        </button>
+      </form>
+    </div>
   );
 }
+
+export default IncidentForm;
