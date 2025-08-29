@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// CATEGORY METADATA
+// Category metadata (matches IncidentForm)
 const TYPE_META = {
   fire:     { emoji: "🔥", colorHex: "#ef4444", label: "Fire/Explosion" },
   crime:    { emoji: "🚔", colorHex: "#f59e0b", label: "Crime/Theft" },
@@ -17,34 +17,24 @@ const TYPE_META = {
   other:    { emoji: "❓", colorHex: "#6b7280", label: "Other" },
 };
 
-// FORMAT TIMESTAMP
-function formatTimestamp(ts) {
-  if (!ts) return "—";
-  try {
-    return ts.toDate().toLocaleString();
-  } catch {
-    return "—";
-  }
-}
-
-// FIT MAP BOUNDS
+// Auto-fit map to markers
 function FitBounds({ incidents }) {
   const map = useMap();
   useEffect(() => {
     const pts = incidents
-      .filter((i) => i.coords?.lat && i.coords?.lng)
+      .filter((i) => i.coords && i.coords.lat && i.coords.lng)
       .map((i) => [i.coords.lat, i.coords.lng]);
 
     if (pts.length > 0) {
       map.fitBounds(pts, { padding: [50, 50] });
     } else {
-      map.setView([6.5244, 3.3792], 10); // fallback Lagos
+      map.setView([6.5244, 3.3792], 10); // Lagos fallback
     }
   }, [incidents, map]);
   return null;
 }
 
-// MARKER ICON
+// Emoji marker bubble
 function markerIconFor(typeValue = "other") {
   const meta = TYPE_META[typeValue] || TYPE_META.other;
   return new L.DivIcon({
@@ -78,7 +68,7 @@ export default function ReportsDashboard() {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
-  // LIVE FIRESTORE DATA
+  // Live Firestore sync
   useEffect(() => {
     const q = query(collection(db, "incidents"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
@@ -87,12 +77,12 @@ export default function ReportsDashboard() {
     return () => unsub();
   }, []);
 
-  // FILTERED INCIDENTS
+  // Filter + search
   const filtered = incidents.filter((inc) => {
     const byType = filterType === "All" || inc.typeValue === filterType;
     const term = search.trim().toLowerCase();
     const bySearch =
-      !term ||
+      term === "" ||
       inc.description?.toLowerCase().includes(term) ||
       inc.location?.toLowerCase().includes(term) ||
       inc.type?.toLowerCase().includes(term);
@@ -101,13 +91,12 @@ export default function ReportsDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 relative">
-      {/* HEADER */}
+      {/* Header + Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2 className="text-3xl font-bold text-gray-800">
           🚨 Community Incident Reports
         </h2>
 
-        {/* TABS */}
         <div className="flex gap-2">
           {["list", "map"].map((tab) => (
             <button
@@ -125,7 +114,7 @@ export default function ReportsDashboard() {
         </div>
       </div>
 
-      {/* FILTERS */}
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-6">
         <div className="flex flex-wrap gap-2">
           <select
@@ -165,55 +154,51 @@ export default function ReportsDashboard() {
         </div>
       </div>
 
-      {/* LIST VIEW (CARDS ONLY) */}
+      {/* LIST VIEW (modern cards, mobile-first) */}
       {activeTab === "list" && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-500">
-              <div className="text-6xl mb-3">🔍</div>
-              <p className="text-lg font-medium">No incidents match your filters.</p>
-              <p className="text-sm">Try changing the category or search term.</p>
-            </div>
-          )}
-
+        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((inc) => {
             const meta = TYPE_META[inc.typeValue || "other"];
             return (
-              <article
+              <div
                 key={inc.id}
                 className="bg-white/80 backdrop-blur p-4 rounded-xl shadow-md hover:shadow-xl transition border border-gray-100"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg text-white"
-                      style={{ background: meta.colorHex }}
-                      aria-hidden
-                    >
-                      {meta.emoji}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold">{meta.label}</div>
-                      <div className="text-xs text-gray-500">
-                        {formatTimestamp(inc.createdAt)}
-                      </div>
-                    </div>
-                  </div>
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full text-white"
+                    style={{ background: meta.colorHex }}
+                  >
+                    {meta.emoji} {meta.label}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {inc.createdAt?.toDate
+                      ? inc.createdAt.toDate().toLocaleString()
+                      : "—"}
+                  </span>
                 </div>
 
                 <p className="text-gray-800 font-medium mb-2">
                   {inc.description || "No description"}
                 </p>
-                <p className="text-gray-600 text-sm">📍 {inc.location || "GPS"}</p>
-              </article>
+                <p className="text-gray-600 text-sm">📍 {inc.location}</p>
+              </div>
             );
           })}
+
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              <div className="text-6xl mb-3">🔍</div>
+              <p className="text-lg font-medium">No incidents found</p>
+              <p className="text-sm">Try changing filters or search terms</p>
+            </div>
+          )}
         </div>
       )}
 
       {/* MAP VIEW */}
       {activeTab === "map" && (
-        <div className="h-[500px] sm:h-[600px] w-full bg-white rounded-xl shadow-lg overflow-hidden transition-all">
+        <div className="h-[500px] sm:h-[600px] w-full bg-white rounded-xl shadow-lg overflow-hidden">
           <MapContainer
             center={[6.5244, 3.3792]}
             zoom={10}
@@ -224,7 +209,9 @@ export default function ReportsDashboard() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+
             <FitBounds incidents={filtered} />
+
             {filtered.map(
               (inc) =>
                 inc.coords && (
@@ -242,13 +229,16 @@ export default function ReportsDashboard() {
                               TYPE_META[inc.typeValue || "other"].colorHex,
                           }}
                         >
-                          <span>{TYPE_META[inc.typeValue || "other"].emoji}</span>
-                          <span>{TYPE_META[inc.typeValue || "other"].label}</span>
+                          {TYPE_META[inc.typeValue || "other"].emoji}{" "}
+                          {TYPE_META[inc.typeValue || "other"].label}
                         </div>
                         <div className="mt-2">{inc.description}</div>
                         <div className="text-xs text-gray-600 mt-1">
-                          📍 {inc.location || "GPS"} <br />
-                          🕒 {formatTimestamp(inc.createdAt)}
+                          📍 {inc.location} <br />
+                          🕒{" "}
+                          {inc.createdAt?.toDate
+                            ? inc.createdAt.toDate().toLocaleString()
+                            : "—"}
                         </div>
                       </div>
                     </Popup>
@@ -259,7 +249,7 @@ export default function ReportsDashboard() {
         </div>
       )}
 
-      {/* FAB */}
+      {/* Floating Action Button */}
       <button
         onClick={() => navigate("/")}
         className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition transform hover:scale-105 focus:outline-none"
